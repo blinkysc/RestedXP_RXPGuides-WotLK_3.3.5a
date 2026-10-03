@@ -402,8 +402,37 @@ function addon.GetStepQuestReward(titleOrId)
     return (reward >= 0 and reward or 0), element
 end
 
+-- 3.3.5a: IsSpellKnown returns false for a lower rank once a higher rank is
+-- learned, and misses some unranked passives (e.g. Parry). Fall back to the
+-- spellbook: same name at an equal/higher rank, or any entry if unranked.
+local function KnowsSpellInBook(id)
+    local GetSpellName = _G.GetSpellName
+    if not (GetSpellName and _G.GetNumSpellTabs and _G.GetSpellTabInfo) then
+        return false
+    end
+    local name, rankText = _G.GetSpellInfo(id)
+    if not name then return false end
+    local rank = rankText and tonumber(rankText:match("(%d+)"))
+    local bookType = _G.BOOKTYPE_SPELL or "spell"
+    for tab = 1, _G.GetNumSpellTabs() do
+        local _, _, offset, count = _G.GetSpellTabInfo(tab)
+        for index = (offset or 0) + 1, (offset or 0) + (count or 0) do
+            local bookName, bookRank = GetSpellName(index, bookType)
+            if bookName == name then
+                if not rank then return true end
+                local known = bookRank and tonumber(bookRank:match("(%d+)"))
+                if known and known >= rank then return true end
+            end
+        end
+    end
+    return false
+end
+
 function addon.IsPlayerSpell(id)
     if IsPlayerSpell(id) or IsSpellKnown(id, true) or IsSpellKnown(id) then
+        return true
+    end
+    if addon.gameVersion < 40000 and KnowsSpellInBook(id) then
         return true
     end
     if ExtraActionButton1 then
