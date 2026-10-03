@@ -1436,7 +1436,12 @@ function CurrentStepFrame.UpdateText(languageRefresh)
                         elementFrame.text:ClearAllPoints()
                         elementFrame.text:SetPoint("TOPLEFT", elementFrame.button,
                                                 "TOPRIGHT", 11, -1)
-                        elementFrame.text:SetPoint("RIGHT", stepframe, -5, 0)
+                        -- Fixed width instead of a RIGHT anchor: that anchor
+                        -- also pins the text to the frame's vertical centre,
+                        -- so on 3.3.5a it was clipped to one line ("K...").
+                        -- Offsets: button inset 6 + width 12 + gap 11 + 5.
+                        elementFrame.text:SetWidth(
+                            math.max(stepframe:GetWidth() - 34, 50))
 
                          -- Prevent text from overwritten with " ", could be stale text
                         if element.text ~= ' ' then
