@@ -6388,7 +6388,7 @@ step
 #completewith Mudsprocket1
 .goto Dustwallow Marsh,42.82,72.44
 >>|Tinterface/worldmap/chatbubble_64grey.blp:20|tTalk to |cRXP_FRIENDLY_Dyslix Silvergrub|r
-.fp >> Get the Mudsprocket flight path
+.fp Mudsprocket >> Get the Mudsprocket flight path
 .target Dyslix Silvergrub
 step
 .goto Dustwallow Marsh,42.33,72.93

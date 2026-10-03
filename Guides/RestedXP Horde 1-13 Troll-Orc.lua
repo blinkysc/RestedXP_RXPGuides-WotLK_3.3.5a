@@ -2369,7 +2369,7 @@ step << !Tauren
 step << !Tauren
 #xprate <1.5
     .goto The Barrens,51.5,30.4
-    .fp >>Get the The Crossroads Flight Path
+    .fp Crossroads >>Get the Crossroads Flight Path
 step << Orc/Troll
 #xprate <1.5
     >>do NOT fly to Orgrimmar
@@ -2511,7 +2511,7 @@ step << !Tauren
 #xprate <1.5
     >>Go to the top floor of the tower
 .goto Thunder Bluff,46.8,49.9
-    .fp >>Get the Thunder Bluff Flight Path
+    .fp Thunder Bluff >>Get the Thunder Bluff Flight Path
 step << !Tauren
 #xprate <1.5
 .goto Thunder Bluff,29.6,29.7,15 >>Jump down into the cave

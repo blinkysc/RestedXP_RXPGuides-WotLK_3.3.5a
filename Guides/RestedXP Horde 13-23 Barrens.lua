@@ -71,7 +71,7 @@ step << !Tauren
 step << !Tauren
 #xprate >1.499
     .goto The Barrens,51.5,30.4
-    .fp >>Get the The Crossroads Flight Path
+    .fp Crossroads >>Get the Crossroads Flight Path
 step << Orc/Troll
 #xprate >1.499
     >>do NOT fly to Orgrimmar
