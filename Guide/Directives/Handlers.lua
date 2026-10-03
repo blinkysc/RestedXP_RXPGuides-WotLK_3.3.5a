@@ -225,6 +225,12 @@ if addon.gameVersion > 50000 then
     addon.icons["goto"] = "|TInterface/MINIMAP/POIICONS:0:0:0:0:128:128:63:72:0:4|t"
     addon.icons["home"] = "|TInterface/MINIMAP/POIICONS:0:0:0:0:128:128:45:54:0:4|t"
     addon.icons["deathskip"] = "|TInterface/MINIMAP/POIICONS:0:0:0:0:128:128:72:81:0:4|t"
+elseif addon.gameVersion < 30400 then
+    -- 3.3.5a POIICONS is a 256x256 sheet with a different layout than the
+    -- Classic clients, so the cropped atlas coords below show the wrong icon.
+    addon.icons["goto"] = "|TInterface/Icons/INV_Misc_Map_01:0:0:0:0:64:64:5:59:5:59|t"
+    addon.icons["home"] = "|TInterface/MINIMAP/TRACKING/Innkeeper:0|t"
+    addon.icons["deathskip"] = "|TInterface/Icons/Spell_Holy_Resurrection:0:0:0:0:64:64:5:59:5:59|t"
 elseif addon.gameVersion > 30000 then
     addon.icons["goto"] = "|TInterface/MINIMAP/POIICONS:0:0:0:0:128:128:63:72:0:9|t"
     addon.icons["home"] = "|TInterface/MINIMAP/POIICONS:0:0:0:0:128:128:45:54:0:9|t"
