@@ -929,12 +929,60 @@ function addon.ReplaceNpcIds(textLine,element)
     return textLine
 end
 
+-- 3.3.5a has no GET_ITEM_INFO_RECEIVED and GetItemInfo never asks the server
+-- for an uncached item, so step text like ".collect" stayed ": 0/1". Request
+-- the item through a hidden tooltip and poll until it lands in the cache.
+local RequestItemFromServer
+if gameVersion < 40000 then
+    local pending, pendingCount = {}, 0
+    local tooltip, poller
+    local elapsed = 0
+    local POLL_INTERVAL, GIVE_UP_AFTER = 0.5, 30
+
+    local function Poll(self, dt)
+        elapsed = elapsed + dt
+        if elapsed < POLL_INTERVAL then return end
+        elapsed = 0
+        local now = GetTime()
+        for id, requestedAt in pairs(pending) do
+            if GetItemInfo(id) then
+                pending[id], pendingCount = nil, pendingCount - 1
+                addon.itemQueryList[id] = nil
+                addon.updateStepText = true
+            elseif now - requestedAt > GIVE_UP_AFTER then
+                pending[id], pendingCount = nil, pendingCount - 1
+            end
+        end
+        if pendingCount <= 0 then
+            pendingCount = 0
+            self:SetScript("OnUpdate", nil)
+        end
+    end
+
+    RequestItemFromServer = function(id)
+        if pending[id] then return end
+        if not tooltip then
+            tooltip = CreateFrame("GameTooltip", "RXPItemCacheTooltip", nil,
+                                  "GameTooltipTemplate")
+            poller = CreateFrame("Frame")
+        end
+        tooltip:SetOwner(_G.WorldFrame, "ANCHOR_NONE")
+        tooltip:SetHyperlink("item:" .. id)
+        tooltip:Hide()
+        pending[id], pendingCount = GetTime(), pendingCount + 1
+        poller:SetScript("OnUpdate", Poll)
+    end
+end
+
 function addon.GetItemName(id)
     id = id or false
     id = tonumber(id)
     if not id then return end
     local name = GetItemInfo(id)
-    if not name then addon.itemQueryList[id] = true end
+    if not name then
+        addon.itemQueryList[id] = true
+        if RequestItemFromServer then RequestItemFromServer(id) end
+    end
     return name
 end
 
