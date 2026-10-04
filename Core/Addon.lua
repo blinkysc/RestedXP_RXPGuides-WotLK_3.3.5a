@@ -2839,6 +2839,7 @@ function addon:PLAYER_LEVEL_UP(_, level)
     end
 
     addon.player.level = level
+    addon.updateSteps = true -- overleveled quest skipping depends on level
 end
 
 function addon:UNIT_PET(_, unit)

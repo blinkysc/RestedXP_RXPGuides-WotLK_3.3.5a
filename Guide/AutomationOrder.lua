@@ -10,7 +10,8 @@ local QUEST_SELECTION_LIFETIME = 5
 
 local function IsPending(element)
     if type(element) ~= "table" then return false end
-    if element.completed or element.skip or element.textOnly or element.invalid then
+    if element.completed or element.skip or element.textOnly or element.invalid or
+        element.levelSkip then
         return false
     end
     return not (type(element.step) == "table" and element.step.completed)

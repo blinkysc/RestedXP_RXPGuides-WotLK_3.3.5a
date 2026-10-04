@@ -52,9 +52,11 @@ function state:CanAdvance(step)
     if step.completed and not step.completionFromElements and not waitingForHearth then
         return true -- an explicit guide gate, not the completion latch
     end
+    if step.levelSkipped then return true end -- "Skip overleveled steps"
     local complete = true
     for _, element in ipairs(step.elements or {}) do
-        if not (element.completed or element.skip or element.textOnly) then complete = false; break end
+        if not (element.completed or element.skip or element.textOnly or
+                element.levelSkip) then complete = false; break end
     end
     return complete
 end

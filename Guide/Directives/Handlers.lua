@@ -949,6 +949,7 @@ if gameVersion < 40000 then
                 pending[id], pendingCount = nil, pendingCount - 1
                 addon.itemQueryList[id] = nil
                 addon.updateStepText = true
+                addon.updateSteps = true -- gear skip needs the item's level
             elseif now - requestedAt > GIVE_UP_AFTER then
                 pending[id], pendingCount = nil, pendingCount - 1
             end

@@ -55,6 +55,7 @@ DB\wotlk\db.lua
 Compat\LocationLocales335.lua
 DB\wotlk\dungeonData_335.lua
 DB\wotlk\questPrerequisites_335.lua
+DB\wotlk\questSkip_335.lua
 DB\wotlk\compatibilityPacks_335.lua
 DB\wotlk\guideEnglishNames_335.lua
 DB\questDB.lua

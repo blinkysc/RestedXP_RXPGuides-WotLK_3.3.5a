@@ -671,6 +671,112 @@ local function ApplyElementVisualState(elementFrame, element, step)
     elementFrame.text:SetTextColor(unpack(color))
 end
 
+-- "Skip overleveled steps": also skips quest steps once the player is
+-- LEVEL_SKIP_MARGIN or more levels above the quest (the RestedXP authors'
+-- own .maxlevel tags typically skip 2-4 levels past a quest). DB/wotlk/questSkip_335.lua only lists quests that are safe to drop
+-- (no class/spell/profession quests or chains leading into one), so a quest
+-- missing from it is never skipped.
+local levelSkipTags = {accept = true, turnin = true, complete = true,
+                       collect = true}
+-- Navigation-only lines that may share a step with a skipped quest.
+local levelSkipPassive = {["goto"] = true, target = true, mob = true,
+                          unitscan = true}
+local LEVEL_SKIP_MARGIN = 5
+
+function addon.IsQuestOverleveled(questId)
+    local profile = addon.settings and addon.settings.profile
+    local data = addon.QuestSkipData335
+    questId = tonumber(questId)
+    if not (profile and profile.enableXpStepSkipping and data and questId) then
+        return false
+    end
+    local quest = data[questId]
+    if not quest then return false end
+    if addon.game == "WOTLK" and profile.northrendLM then return false end
+    local playerLevel = UnitLevel("player")
+    -- Keep the quest when it, or anything later in its chain, is still close
+    -- enough to be worth doing. Steps that need a skipped quest are dropped
+    -- by the guide's own missing-prerequisite handling.
+    return playerLevel - quest.chainLevel >= LEVEL_SKIP_MARGIN
+end
+
+-- Inventory slot a purchasable piece of gear would go in.
+local gearSlots = {
+    INVTYPE_WEAPON = 16, INVTYPE_2HWEAPON = 16, INVTYPE_WEAPONMAINHAND = 16,
+    INVTYPE_WEAPONOFFHAND = 17, INVTYPE_SHIELD = 17, INVTYPE_HOLDABLE = 17,
+    INVTYPE_RANGED = 18, INVTYPE_RANGEDRIGHT = 18, INVTYPE_THROWN = 18,
+    INVTYPE_HEAD = 1, INVTYPE_SHOULDER = 3, INVTYPE_CHEST = 5,
+    INVTYPE_ROBE = 5, INVTYPE_WAIST = 6, INVTYPE_LEGS = 7, INVTYPE_FEET = 8,
+    INVTYPE_WRIST = 9, INVTYPE_HAND = 10, INVTYPE_CLOAK = 15,
+}
+
+-- "Buy a <weapon>" steps: skip when the item is LEVEL_SKIP_MARGIN or more
+-- levels below the player and the slot already holds something. An empty slot keeps the step (e.g. a
+-- Warrior's first throwing weapon is still worth buying).
+local function IsGearOverleveled(itemId)
+    local _, _, _, itemLevel, minLevel, _, _, _, equipLoc = GetItemInfo(itemId)
+    local slot = equipLoc and gearSlots[equipLoc]
+    if not slot or not GetInventoryItemID("player", slot) then return false end
+    local level = (minLevel and minLevel > 0) and minLevel or itemLevel
+    if not level then return false end
+    return UnitLevel("player") - level >= LEVEL_SKIP_MARGIN
+end
+
+-- A .collect line without a quest ID still belongs to its quest when the item
+-- is quest-only; skip it only if every quest using the item is overleveled.
+local function IsElementOverleveled(element)
+    if element.questId then
+        return addon.IsQuestOverleveled(element.questId)
+    end
+    if element.tag ~= "collect" then return false end
+    local quests = addon.QuestSkipItems335 and
+                       addon.QuestSkipItems335[element.id]
+    if not quests then
+        local profile = addon.settings and addon.settings.profile
+        return profile and profile.enableXpStepSkipping and
+                   IsGearOverleveled(element.id) or false
+    end
+    for _, questId in ipairs(quests) do
+        if not addon.IsQuestOverleveled(questId) then return false end
+    end
+    return true
+end
+
+-- Quest-class item with no known quest link (e.g. a turn-in item looted next
+-- to the quest giver): it follows the other quest lines in its step.
+local function IsContextItem(element)
+    return element.tag == "collect" and not element.questId and
+               addon.QuestSkipContextItems335 and
+               addon.QuestSkipContextItems335[element.id]
+end
+
+-- Flags overleveled quest elements and returns true when the whole step can go.
+function addon.ApplyQuestLevelSkip(step)
+    local any, whole, context = false, true, nil
+    for _, element in ipairs(step.elements or {}) do
+        local tag = element.tag
+        local done = element.completed or element.skip
+        element.levelSkip = nil
+        if levelSkipTags[tag] and not done and IsElementOverleveled(element) then
+            element.levelSkip = true
+            any = true
+        elseif not done and IsContextItem(element) then
+            context = context or {}
+            table.insert(context, element)
+        elseif not (element.textOnly or done or levelSkipPassive[tag]) then
+            whole = false
+        end
+    end
+    if context then
+        if any and whole then
+            for _, element in ipairs(context) do element.levelSkip = true end
+        else
+            whole = false
+        end
+    end
+    return any and whole
+end
+
 function addon.UpdateStepCompletion()
     if addon.IsQuestRewardSettlementActive and
         addon.IsQuestRewardSettlementActive() then
@@ -696,9 +802,15 @@ function addon.UpdateStepCompletion()
                 end
             end
         end
-        if not ((step.completed and not waitingForHearth) or step.tip) then
+        if not (step.completed or step.tip) then
+            step.levelSkipped = addon.ApplyQuestLevelSkip and
+                                    addon.ApplyQuestLevelSkip(step) or nil
+        end
+        if not ((step.completed and not waitingForHearth) or step.tip or
+                step.levelSkipped) then
             for j, element in ipairs(step.elements) do
-                if not (element.completed or element.skip or element.textOnly) then
+                if not (element.completed or element.skip or element.textOnly or
+                        element.levelSkip) then
                     completed = false
                     break
                 end
